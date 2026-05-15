@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mendoan & NasiPecel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        emerald: { 500: '#10b981', 600: '#059669', 700: '#047857' }, // Primary: Emerald Green
+                        orange: { 500: '#f97316', 600: '#ea580c' } // Accent: Tangerine/Bright Orange
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for better UI */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #059669; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #047857; }
+        
+        .loader {
+            border: 4px solid #f3f3f3; border-top: 4px solid #059669;
+            border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen flex flex-col">
+
+    <!-- Navbar -->
+    <nav class="bg-emerald-600 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl">🍛</span>
+                    <span class="font-bold text-xl tracking-tight">Mendoan & NasiPecel</span>
+                </div>
+                <div id="nav-user-info" class="hidden flex items-center space-x-4">
+                    <span id="user-greeting" class="text-sm font-medium hidden sm:block"></span>
+                    <span id="user-badge" class="px-2 py-1 bg-orange-500 rounded-full text-xs font-bold uppercase"></span>
+                    <button id="btn-logout" class="bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 rounded-md text-sm transition font-medium">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow container mx-auto px-4 py-8 max-w-7xl">
+        
+        <!-- Loading Overlay -->
+        <div id="global-loader" class="fixed inset-0 bg-white bg-opacity-80 z-50 flex flex-col justify-center items-center hidden">
+            <div class="loader mb-4"></div>
+            <p class="text-emerald-700 font-medium">Memuat data...</p>
+        </div>
+
+        <!-- Notification Toast -->
+        <div id="toast" class="fixed bottom-4 right-4 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg transform transition-transform duration-300 translate-y-20 opacity-0 z-50">
+            <span id="toast-msg">Notification</span>
+        </div>
+
+        <!-- ==================== VIEW: LOGIN ==================== -->
+        <section id="view-login" class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-md border border-gray-100 mt-10">
+            <h2 class="text-2xl font-bold text-center text-emerald-700 mb-6">Selamat Datang</h2>
+            
+            <!-- Admin Login Form -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold border-b pb-2 mb-4 text-gray-700">Login Admin</h3>
+                <form id="admin-login-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Email</label>
+                        <input type="email" id="admin-email" required class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Password</label>
+                        <input type="password" id="admin-password" required class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-emerald-500 focus:outline-none">
+                    </div>
+                    <div class="flex space-x-2">
+                        <button type="submit" class="flex-1 bg-emerald-600 text-white py-2 rounded-md hover:bg-emerald-700 transition font-medium">Masuk Admin</button>
+                        <button type="button" id="btn-register-admin" class="flex-1 border border-emerald-600 text-emerald-600 py-2 rounded-md hover:bg-emerald-50 transition font-medium">Daftar Admin</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="relative flex py-5 items-center">
+                <div class="flex-grow border-t border-gray-300"></div>
+                <span class="flex-shrink-0 mx-4 text-gray-400 text-sm">ATAU</span>
+                <div class="flex-grow border-t border-gray-300"></div>
+            </div>
+
+            <!-- Customer Login -->
+            <div>
+                <h3 class="text-lg font-semibold mb-4 text-center text-gray-700">Pelanggan</h3>
+                <button id="btn-google-login" class="w-full flex items-center justify-center space-x-2 border-2 border-gray-200 bg-white text-gray-700 py-2.5 rounded-md hover:bg-gray-50 transition font-medium">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Masuk dengan Google</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW: ADMIN DASHBOARD ==================== -->
+        <section id="view-admin" class="hidden space-y-8">
+            
+            <!-- Admin Menu Management -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold text-emerald-800">Manajemen Menu</h2>
+                    <button id="btn-toggle-menu-form" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md transition text-sm font-medium">+ Tambah Menu</button>
+                </div>
+
+                <!-- Add/Edit Menu Form -->
+                <form id="menu-form" class="hidden bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input type="hidden" id="menu-id">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Nama Menu</label>
+                        <input type="text" id="menu-name" required class="w-full px-3 py-2 border rounded-md focus:ring-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Harga (Rp)</label>
+                        <input type="number" id="menu-price" required min="0" class="w-full px-3 py-2 border rounded-md focus:ring-emerald-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-600 mb-1">Deskripsi Singkat</label>
+                        <input type="text" id="menu-desc" class="w-full px-3 py-2 border rounded-md focus:ring-emerald-500">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label class="block text-sm text-gray-600 mb-1">URL Gambar</label>
+                        <input type="url" id="menu-img" placeholder="https://..." class="w-full px-3 py-2 border rounded-md focus:ring-emerald-500">
+                    </div>
+                    <div class="md:col-span-2 flex space-x-2">
+                        <button type="submit" class="bg-emerald-600 text-white px-4 py-2 rounded-md hover:bg-emerald-700 transition">Simpan Menu</button>
+                        <button type="button" id="btn-cancel-menu" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 transition">Batal</button>
+                    </div>
+                </form>
+
+                <!-- Menu List Admin -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-emerald-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase">Menu</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-emerald-800 uppercase">Harga</th>
+                                <th class="px-6 py-3 text-right text-xs font-medium text-emerald-800 uppercase">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-menu-list" class="bg-white divide-y divide-gray-200">
+                            <!-- Menu items injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Admin Order Management -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                <h2 class="text-xl font-bold text-emerald-800 mb-6">Daftar Pesanan Pelanggan</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-orange-50">
+                            <tr>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase">ID / Waktu</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase">Pelanggan</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase">Pesanan</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase">Total / Bayar</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium text-orange-800 uppercase">Status</th>
+                                <th class="px-4 py-3 text-right text-xs font-medium text-orange-800 uppercase">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-order-list" class="bg-white divide-y divide-gray-200">
+                            <!-- Order items injected here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ==================== VIEW: CUSTOMER ==================== -->
+        <section id="view-customer" class="hidden">
+            
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Menu Catalog -->
+                <div class="lg:w-2/3">
+                    <h2 class="text-2xl font-bold text-emerald-800 mb-4 border-b-2 border-emerald-500 inline-block pb-1">Daftar Menu</h2>
+                    <div id="customer-menu-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Menu items injected here -->
+                    </div>
+                </div>
+
+                <!-- Cart & Checkout -->
+                <div class="lg:w-1/3">
+                    <div class="bg-white p-5 rounded-xl shadow-md border border-emerald-100 sticky top-20">
+                        <h2 class="text-xl font-bold text-emerald-800 mb-4 flex items-center gap-2">
+                            <span>🛒</span> Pesanan Saya
+                        </h2>
+                        
+                        <div id="cart-items" class="space-y-3 mb-4 max-h-60 overflow-y-auto pr-2">
+                            <p class="text-gray-400 text-sm italic">Belum ada pesanan.</p>
+                        </div>
+                        
+                        <div class="border-t pt-3 mb-4">
+                            <div class="flex justify-between font-bold text-lg text-gray-800">
+                                <span>Total:</span>
+                                <span id="cart-total">Rp 0</span>
+                            </div>
+                        </div>
+
+                        <form id="checkout-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Metode Pembayaran</label>
+                                <select id="payment-method" class="w-full border-gray-300 rounded-md shadow-sm focus:border-emerald-500 focus:ring-emerald-500 px-3 py-2 border bg-gray-50">
+                                    <option value="cod">Cash on Delivery (COD)</option>
+                                    <option value="qris">QRIS (E-Wallet/M-Banking)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- QRIS Dummy Container -->
+                            <div id="qris-container" class="hidden bg-gray-100 p-4 rounded-lg text-center border border-dashed border-gray-300">
+                                <p class="text-sm text-gray-600 mb-2">Scan QR Code di bawah ini:</p>
+                                <!-- Placeholder QR using standard unicode characters for visual effect -->
+                                <div class="bg-white p-2 inline-block rounded shadow-sm">
+                                    <div class="grid grid-cols-4 gap-1 w-24 h-24 bg-black">
+                                        <div class="bg-white w-full h-full col-span-2 row-span-2"></div>
+                                        <div class="bg-white w-full h-full col-start-4"></div>
+                                        <div class="bg-white w-full h-full row-start-4 col-start-1"></div>
+                                        <div class="bg-white w-full h-full row-start-4 col-start-4"></div>
+                                        <div class="bg-white w-full h-full col-start-2 row-start-3"></div>
+                                        <div class="bg-white w-full h-full col-start-3 row-start-2"></div>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-orange-600 mt-2 font-semibold">Simulasi Pembayaran QRIS</p>
+                            </div>
+
+                            <button type="submit" id="btn-checkout" class="w-full bg-orange-500 text-white font-bold py-3 rounded-md hover:bg-orange-600 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                Buat Pesanan
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Customer Order History -->
+                    <div class="mt-6 bg-white p-5 rounded-xl shadow-md border border-gray-100">
+                        <h2 class="text-lg font-bold text-gray-800 mb-3">Status Pesanan Aktif</h2>
+                        <div id="customer-order-history" class="space-y-3">
+                            <!-- User active orders injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+    </main>
+
+    <!-- Firebase SDK & Application Logic -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+        // ==========================================
+        // KONFIGURASI FIREBASE SESUAI PERMINTAAN
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "AIzaSyArMXfOKApC1WznjYcqBWQi_X2w7cgzszI",
+            authDomain: "mendoannasipecel25.firebaseapp.com",
+            projectId: "mendoannasipecel25",
+            storageBucket: "mendoannasipecel25.firebasestorage.app",
+            messagingSenderId: "671433678552",
+            appId: "1:671433678552:web:e24c26056a32ff4569c1ad"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        /*
+        ========================================================================
+        SARAN FIRESTORE SECURITY RULES (Terapkan di Firebase Console > Firestore > Rules)
+        ========================================================================
+        rules_version = '2';
+        service cloud.firestore {
+            match /databases/{database}/documents {
+                // Aturan untuk data pengguna
+                match /users/{userId} {
+                    allow read, write: if request.auth != null && request.auth.uid == userId;
+                    allow read: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+                }
+                // Aturan untuk Menu (Semua bisa baca, hanya admin yang bisa tulis)
+                match /menus/{menuId} {
+                    allow read: if true;
+                    allow write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+                }
+                // Aturan untuk Pesanan
+                match /orders/{orderId} {
+                    allow create: if request.auth != null;
+                    allow read: if request.auth != null && (resource.data.customerId == request.auth.uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+                    allow update, delete: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+                }
+            }
+        }
+        ========================================================================
+        */
+
+        // ==========================================
+        // STATE MANAGEMENT
+        // ==========================================
+        let currentUser = null;
+        let userRole = null; // 'admin' | 'customer'
+        let menusData = [];
+        let ordersData = [];
+        let cart = [];
+
+        // DOM Elements
+        const elLoader = document.getElementById('global-loader');
+        const viewLogin = document.getElementById('view-login');
+        const viewAdmin = document.getElementById('view-admin');
+        const viewCustomer = document.getElementById('view-customer');
+        const navUserInfo = document.getElementById('nav-user-info');
+        const navUserGreeting = document.getElementById('user-greeting');
+        const navUserBadge = document.getElementById('user-badge');
+        
+        // Utils
+        const formatRp = (num) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(num);
+        const showLoader = (show) => elLoader.classList.toggle('hidden', !show);
+        const showToast = (msg, isError = false) => {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            toast.className = `fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg transform transition-transform duration-300 z-50 text-white ${isError ? 'bg-red-500' : 'bg-emerald-600'}`;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+        };
+        const switchView = (viewId) => {
+            [viewLogin, viewAdmin, viewCustomer].forEach(el => el.classList.add('hidden'));
+            document.getElementById(viewId).classList.remove('hidden');
+        };
+
+        // ==========================================
+        // AUTHENTICATION LOGIC
+        // ==========================================
+        
+        // Cek Role dan Simpan User
+        const checkAndSaveUserRole = async (user, defaultRole) => {
+            try {
+                const userRef = doc(db, 'users', user.uid);
+                const userSnap = await getDoc(userRef);
+                
+                if (!userSnap.exists()) {
+                    // Buat user baru dengan role default
+                    await setDoc(userRef, {
+                        uid: user.uid,
+                        email: user.email,
+                        displayName: user.displayName || user.email.split('@')[0],
+                        role: defaultRole,
+                        createdAt: serverTimestamp()
+                    });
+                    userRole = defaultRole;
+                } else {
+                    userRole = userSnap.data().role;
+                }
+                
+                // Update UI Navigation
+                navUserInfo.classList.remove('hidden');
+                navUserGreeting.textContent = `Halo, ${user.displayName || user.email.split('@')[0]}`;
+                navUserBadge.textContent = userRole;
+                navUserBadge.className = `px-2 py-1 rounded-full text-xs font-bold uppercase ${userRole === 'admin' ? 'bg-orange-500 text-white' : 'bg-emerald-200 text-emerald-800'}`;
+                
+                if (userRole === 'admin') {
+                    switchView('view-admin');
+                    initAdminData();
+                } else {
+                    switchView('view-customer');
+                    initCustomerData();
+                }
+            } catch (error) {
+                console.error("Error checking role:", error);
+                showToast("Gagal memuat profil pengguna", true);
+                signOut(auth);
+            }
+        };
+
+        // Auth State Listener
+        onAuthStateChanged(auth, (user) => {
+            showLoader(true);
+            if (user) {
+                currentUser = user;
+                // Asumsi: login dengan email/pass selalu admin (karena kita buatkan tombol khusus), 
+                // login google selalu customer (bisa diubah nanti di firestore secara manual jika butuh)
+                // Kita gunakan default role sebagai fallback saat akun pertama kali dibuat.
+                const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
+                checkAndSaveUserRole(user, isEmailAuth ? 'admin' : 'customer').finally(() => showLoader(false));
+            } else {
+                currentUser = null;
+                userRole = null;
+                navUserInfo.classList.add('hidden');
+                switchView('view-login');
+                showLoader(false);
+            }
+        });
+
+        // Admin Email/Pass Login
+        document.getElementById('admin-login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            showLoader(true);
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showToast("Login Admin Berhasil");
+            } catch (error) {
+                showToast("Login Gagal: " + error.message, true);
+                showLoader(false);
+            }
+        });
+
+        // Admin Registration (Khusus untuk setup awal)
+        document.getElementById('btn-register-admin').addEventListener('click', async () => {
+            const email = document.getElementById('admin-email').value;
+            const password = document.getElementById('admin-password').value;
+            if(!email || !password) return showToast("Isi email dan password untuk mendaftar", true);
+            showLoader(true);
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                showToast("Pendaftaran Admin Berhasil");
+            } catch (error) {
+                showToast("Daftar Gagal: " + error.message, true);
+                showLoader(false);
+            }
+        });
+
+        // Customer Google Login
+        document.getElementById('btn-google-login').addEventListener('click', async () => {
+            showLoader(true);
+            try {
+                await signInWithPopup(auth, googleProvider);
+                showToast("Login Berhasil");
+            } catch (error) {
+                showToast("Login Google Gagal: " + error.message, true);
+                showLoader(false);
+            }
+        });
+
+        // Logout
+        document.getElementById('btn-logout').addEventListener('click', () => {
+            signOut(auth);
+            cart = [];
+            updateCartUI();
+        });
+
+
+        // ==========================================
+        // DATA LISTENER (Realtime)
+        // ==========================================
+        let unsubMenus = null;
+        let unsubOrders = null;
+
+        function listenMenus(callback) {
+            if(unsubMenus) unsubMenus();
+            unsubMenus = onSnapshot(collection(db, 'menus'), (snapshot) => {
+                menusData = [];
+                snapshot.forEach(doc => menusData.push({ id: doc.id, ...doc.data() }));
+                callback();
+            }, (error) => console.error("Menu Listener Error", error));
+        }
+
+        function listenOrders(callback) {
+            if(unsubOrders) unsubOrders();
+            // Catatan: Mengambil semua order lalu di filter di klien karena aturan sistem tidak mengizinkan query kompleks.
+            // Untuk environment produksi sungguhan, sebaiknya gunakan query where('customerId', '==', uid) untuk customer.
+            unsubOrders = onSnapshot(collection(db, 'orders'), (snapshot) => {
+                ordersData = [];
+                snapshot.forEach(doc => ordersData.push({ id: doc.id, ...doc.data() }));
+                // Sort descending by time
+                ordersData.sort((a,b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0)); 
+                callback();
+            }, (error) => console.error("Order Listener Error", error));
+        }
+
+
+        // ==========================================
+        // ADMIN LOGIC
+        // ==========================================
+        const menuForm = document.getElementById('menu-form');
+        
+        function initAdminData() {
+            listenMenus(renderAdminMenus);
+            listenOrders(renderAdminOrders);
+        }
+
+        document.getElementById('btn-toggle-menu-form').addEventListener('click', () => {
+            menuForm.classList.toggle('hidden');
+            menuForm.reset();
+            document.getElementById('menu-id').value = '';
+        });
+        document.getElementById('btn-cancel-menu').addEventListener('click', () => {
+            menuForm.classList.add('hidden');
+        });
+
+        // CRUD Menu
+        menuForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('menu-id').value;
+            const data = {
+                name: document.getElementById('menu-name').value,
+                price: parseFloat(document.getElementById('menu-price').value),
+                desc: document.getElementById('menu-desc').value,
+                img: document.getElementById('menu-img').value || 'https://via.placeholder.com/150?text=Makanan'
+            };
+
+            try {
+                showLoader(true);
+                if (id) {
+                    await updateDoc(doc(db, 'menus', id), data);
+                    showToast("Menu diperbarui");
+                } else {
+                    await addDoc(collection(db, 'menus'), data);
+                    showToast("Menu ditambahkan");
+                }
+                menuForm.reset();
+                menuForm.classList.add('hidden');
+            } catch (error) {
+                showToast("Gagal menyimpan menu", true);
+            } finally {
+                showLoader(false);
+            }
+        });
+
+        window.editMenu = (id) => {
+            const m = menusData.find(x => x.id === id);
+            if(m) {
+                document.getElementById('menu-id').value = m.id;
+                document.getElementById('menu-name').value = m.name;
+                document.getElementById('menu-price').value = m.price;
+                document.getElementById('menu-desc').value = m.desc || '';
+                document.getElementById('menu-img').value = m.img || '';
+                menuForm.classList.remove('hidden');
+            }
+        };
+
+        window.deleteMenu = async (id) => {
+            if(confirm("Hapus menu ini?")) {
+                try {
+                    await deleteDoc(doc(db, 'menus', id));
+                    showToast("Menu dihapus");
+                } catch(e) {
+                    showToast("Gagal menghapus", true);
+                }
+            }
+        };
+
+        function renderAdminMenus() {
+            const tbody = document.getElementById('admin-menu-list');
+            tbody.innerHTML = '';
+            menusData.forEach(m => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-6 py-4">
+                            <div class="flex items-center">
+                                <img class="h-10 w-10 rounded-full object-cover mr-3" src="${m.img}" alt="${m.name}" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23eee%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%23999%22 x=%2250%22 y=%2250%22 font-family=%22sans-serif%22 font-size=%2214%22 text-anchor=%22middle%22 alignment-baseline=%22middle%22%3EImg%3C/text%3E%3C/svg%3E'">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">${m.name}</div>
+                                    <div class="text-sm text-gray-500">${m.desc}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${formatRp(m.price)}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editMenu('${m.id}')" class="text-emerald-600 hover:text-emerald-900 mr-3">Edit</button>
+                            <button onclick="deleteMenu('${m.id}')" class="text-red-600 hover:text-red-900">Hapus</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        window.updateOrderStatus = async (id, status) => {
+            try {
+                await updateDoc(doc(db, 'orders', id), { status });
+                showToast(`Status pesanan diubah ke ${status}`);
+            } catch(e) {
+                showToast("Gagal mengubah status", true);
+            }
+        };
+
+        function renderAdminOrders() {
+            const tbody = document.getElementById('admin-order-list');
+            tbody.innerHTML = '';
+            if(ordersData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-4 text-center text-gray-500 text-sm">Belum ada pesanan</td></tr>';
+                return;
+            }
+
+            const statusColors = {
+                'pending': 'bg-yellow-100 text-yellow-800',
+                'proses': 'bg-blue-100 text-blue-800',
+                'selesai': 'bg-green-100 text-green-800',
+                'batal': 'bg-red-100 text-red-800'
+            };
+
+            ordersData.forEach(o => {
+                const date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleString('id-ID') : '-';
+                const itemsStr = o.items.map(i => `${i.qty}x ${i.name}`).join('<br>');
+                
+                let actionBtns = '';
+                if(o.status === 'pending') {
+                    actionBtns = `
+                        <button onclick="updateOrderStatus('${o.id}', 'proses')" class="text-blue-600 text-xs font-bold border border-blue-600 px-2 py-1 rounded mb-1 w-full hover:bg-blue-50">Proses</button>
+                        <button onclick="updateOrderStatus('${o.id}', 'batal')" class="text-red-600 text-xs font-bold border border-red-600 px-2 py-1 rounded w-full hover:bg-red-50">Tolak</button>
+                    `;
+                } else if(o.status === 'proses') {
+                    actionBtns = `<button onclick="updateOrderStatus('${o.id}', 'selesai')" class="text-emerald-600 text-xs font-bold border border-emerald-600 px-2 py-1 rounded w-full hover:bg-emerald-50">Selesaikan</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="px-4 py-3 whitespace-nowrap text-xs text-gray-500">
+                            <span class="font-mono">${o.id.substring(0,8)}</span><br>
+                            ${date}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900">${o.customerName}</td>
+                        <td class="px-4 py-3 text-sm text-gray-500">${itemsStr}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-bold">
+                            ${formatRp(o.total)}<br>
+                            <span class="text-xs text-orange-600 font-normal uppercase">${o.paymentMethod}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm">
+                            <span class="px-2 py-1 rounded-full text-xs font-semibold ${statusColors[o.status] || 'bg-gray-100'}">${o.status.toUpperCase()}</span>
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-right">
+                            ${actionBtns}
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+
+        // ==========================================
+        // CUSTOMER LOGIC
+        // ==========================================
+        function initCustomerData() {
+            listenMenus(renderCustomerMenus);
+            listenOrders(renderCustomerOrders);
+        }
+
+        window.addToCart = (menuId) => {
+            const menu = menusData.find(m => m.id === menuId);
+            if(!menu) return;
+
+            const existing = cart.find(c => c.id === menuId);
+            if(existing) existing.qty++;
+            else cart.push({ ...menu, qty: 1 });
+            
+            updateCartUI();
+            showToast(`${menu.name} ditambahkan!`);
+        };
+
+        window.updateCartQty = (menuId, delta) => {
+            const index = cart.findIndex(c => c.id === menuId);
+            if(index > -1) {
+                cart[index].qty += delta;
+                if(cart[index].qty <= 0) cart.splice(index, 1);
+                updateCartUI();
+            }
+        };
+
+        function updateCartUI() {
+            const container = document.getElementById('cart-items');
+            const totalEl = document.getElementById('cart-total');
+            const btnCheckout = document.getElementById('btn-checkout');
+            
+            container.innerHTML = '';
+            let total = 0;
+
+            if(cart.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-sm italic">Belum ada pesanan.</p>';
+                btnCheckout.disabled = true;
+            } else {
+                btnCheckout.disabled = false;
+                cart.forEach(item => {
+                    const itemTotal = item.price * item.qty;
+                    total += itemTotal;
+                    container.innerHTML += `
+                        <div class="flex justify-between items-center border-b pb-2">
+                            <div class="flex-1">
+                                <h4 class="text-sm font-semibold text-gray-800">${item.name}</h4>
+                                <div class="text-xs text-gray-500">${formatRp(item.price)} x ${item.qty}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button onclick="updateCartQty('${item.id}', -1)" class="w-6 h-6 bg-gray-200 rounded flex items-center justify-center font-bold text-gray-600 hover:bg-gray-300">-</button>
+                                <span class="text-sm font-bold w-4 text-center">${item.qty}</span>
+                                <button onclick="updateCartQty('${item.id}', 1)" class="w-6 h-6 bg-emerald-100 rounded flex items-center justify-center font-bold text-emerald-700 hover:bg-emerald-200">+</button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            totalEl.textContent = formatRp(total);
+        }
+
+        function renderCustomerMenus() {
+            const grid = document.getElementById('customer-menu-grid');
+            grid.innerHTML = '';
+            menusData.forEach(m => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col hover:shadow-md transition">
+                        <img src="${m.img}" alt="${m.name}" class="w-full h-40 object-cover" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Crect fill=%22%23f3f4f6%22 width=%22100%22 height=%22100%22/%3E%3Ctext fill=%22%239ca3af%22 x=%2250%22 y=%2250%22 font-family=%22sans-serif%22 font-size=%2214%22 text-anchor=%22middle%22 alignment-baseline=%22middle%22%3EGambar%3C/text%3E%3C/svg%3E'">
+                        <div class="p-4 flex flex-col flex-grow">
+                            <h3 class="font-bold text-lg text-gray-800">${m.name}</h3>
+                            <p class="text-sm text-gray-500 flex-grow mb-2 line-clamp-2">${m.desc}</p>
+                            <div class="flex justify-between items-center mt-auto">
+                                <span class="font-bold text-orange-600">${formatRp(m.price)}</span>
+                                <button onclick="addToCart('${m.id}')" class="bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full text-sm font-bold hover:bg-emerald-200 transition">+ Keranjang</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Handle Payment Method Change
+        document.getElementById('payment-method').addEventListener('change', (e) => {
+            const qrisContainer = document.getElementById('qris-container');
+            if(e.target.value === 'qris') {
+                qrisContainer.classList.remove('hidden');
+            } else {
+                qrisContainer.classList.add('hidden');
+            }
+        });
+
+        // Checkout
+        document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if(cart.length === 0 || !currentUser) return;
+
+            const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+            const method = document.getElementById('payment-method').value;
+
+            const orderData = {
+                customerId: currentUser.uid,
+                customerName: currentUser.displayName || currentUser.email,
+                items: cart.map(c => ({ id: c.id, name: c.name, price: c.price, qty: c.qty })),
+                total: total,
+                paymentMethod: method,
+                status: 'pending', // pending -> proses -> selesai / batal
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                showLoader(true);
+                await addDoc(collection(db, 'orders'), orderData);
+                cart = []; // clear cart
+                updateCartUI();
+                showToast("Pesanan berhasil dibuat!");
+                document.getElementById('payment-method').value = 'cod';
+                document.getElementById('qris-container').classList.add('hidden');
+            } catch(err) {
+                showToast("Gagal membuat pesanan", true);
+            } finally {
+                showLoader(false);
+            }
+        });
+
+        function renderCustomerOrders() {
+            if(!currentUser) return;
+            const container = document.getElementById('customer-order-history');
+            container.innerHTML = '';
+            
+            // Filter orders untuk user yang sedang login (di client-side karena aturan query)
+            const myOrders = ordersData.filter(o => o.customerId === currentUser.uid);
+
+            if(myOrders.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm italic">Belum ada riwayat pesanan.</p>';
+                return;
+            }
+
+            const statusColors = {
+                'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                'proses': 'bg-blue-100 text-blue-800 border-blue-200',
+                'selesai': 'bg-green-100 text-green-800 border-green-200',
+                'batal': 'bg-red-100 text-red-800 border-red-200'
+            };
+
+            myOrders.forEach(o => {
+                const date = o.createdAt ? new Date(o.createdAt.seconds * 1000).toLocaleString('id-ID') : 'Baru saja';
+                const itemsStr = o.items.map(i => `${i.qty}x ${i.name}`).join(', ');
+                
+                container.innerHTML += `
+                    <div class="border rounded-lg p-3 text-sm flex flex-col gap-2 ${statusColors[o.status] || 'bg-gray-50'}">
+                        <div class="flex justify-between items-start border-b border-white/50 pb-2">
+                            <div>
+                                <span class="font-bold block">Order #${o.id.substring(0,6).toUpperCase()}</span>
+                                <span class="text-xs opacity-75">${date}</span>
+                            </div>
+                            <span class="px-2 py-1 bg-white bg-opacity-50 rounded text-xs font-bold uppercase">${o.status}</span>
+                        </div>
+                        <div>
+                            <p class="font-medium opacity-90">${itemsStr}</p>
+                        </div>
+                        <div class="flex justify-between items-center mt-1 pt-2 border-t border-white/50">
+                            <span class="text-xs uppercase font-bold opacity-75">${o.paymentMethod}</span>
+                            <span class="font-bold">${formatRp(o.total)}</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+    </script>
+</body>
+</html>
